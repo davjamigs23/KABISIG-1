@@ -308,17 +308,6 @@ export default function BarangayAdminPages({
   const [reportCategoryFilter, setReportCategoryFilter] = useState<'All' | 'Demographic' | 'Accomplishment' | 'Attendance' | 'Beneficiary' | 'Financial' | 'Feedback'>('All');
   const [reportSearchQuery, setReportSearchQuery] = useState('');
 
-  const exportCSVData = (filename: string, headers: string[], rows: (string | number)[][]) => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${filename}_Barangay_${currentBarangay?.name || 'San_Francisco'}_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   const openDynamicPrintPDF = (title: string, subtitle: string, refCode: string, headers: string[], rowsHTML: string, summaryStatsHTML: string) => {
     const printWindow = window.open('', '_blank');
@@ -2667,7 +2656,7 @@ return (
                     <h3 className="font-sans font-bold text-slate-900 text-lg mt-1">Executive Reports & Decision Analytics Center</h3>
                     <p className="text-xs text-slate-500 mt-0.5">Live governance database synced across Barangay {currentBarangay?.name || 'Barangay'}.</p>
                   </div>
-                  <button onClick={() => generatePDFReport('Executive Summary & COA Financial Performance Report')} className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black rounded-xl text-xs flex items-center gap-2"><Printer className="w-4 h-4" /> Export Master PDF</button>
+                  <button onClick={() => generatePDFReport('Executive Summary & COA Financial Performance Report')} className="px-4 py-2.5 bg-[#091d64] hover:bg-[#122878] text-white font-bold rounded-xl text-xs flex items-center gap-2 shrink-0"><Printer className="w-4 h-4" /> Export Master PDF</button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

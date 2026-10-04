@@ -375,6 +375,20 @@ router.post(
     const totalActiveRegistrations = currentCount || 0;
 
     if (totalActiveRegistrations >= program.total_slots) {
+      // Notify the youth that this program is full
+      const { error: programFullNotifErr } = await supabaseAdmin.from('notifications').insert([
+        {
+          tenant_id: program.tenant_id,
+          user_id: user.id,
+          title: 'Program Slot Limit Reached',
+          message: 'The program "' + program.title + '" is already full (' + program.total_slots + '/' + program.total_slots + ' slots filled). You can register for other programs from your dashboard.',
+          notification_type: 'PROGRAM_FULL',
+          link: '/programs',
+          is_read: false,
+        },
+      ]);
+      if (programFullNotifErr) { console.warn('Program-full notification failed:', programFullNotifErr.message); }
+
       sendError(
         res,
         `Registration full: All ${program.total_slots} slots for "${program.title}" have already been filled.`,

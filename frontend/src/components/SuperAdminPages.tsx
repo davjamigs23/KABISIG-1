@@ -970,7 +970,7 @@ export default function SuperAdminPages({
                 </div>
                 <button 
                   onClick={() => setShowLydpModal(true)}
-                  className="px-5 py-3 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer flex-shrink-0"
+                  className="px-4 py-2.5 bg-[#091d64] hover:bg-[#122878] text-white font-bold rounded-xl text-xs flex items-center gap-2 shrink-0"
                 >
                   <FileText className="w-4 h-4" /> Generate Official LYDP Report
                 </button>

@@ -759,73 +759,8 @@ export default function OfficialPages({
     setSelectedDoc(null);
   };
 
-  const exportDocsToCSV = () => {
-    const headers = ["ID", "Resolution Number", "Title", "Category", "Status", "Designated Approver", "Uploaded By", "Uploaded Date", "Version"];
-    const rows = localDocs.map(d => [
-      d.id,
-      d.resolutionNumber || 'N/A',
-      `"${d.title.replace(/"/g, '""')}"`,
-      d.category,
-      d.status,
-      `"${(d.designatedApprover || '').replace(/"/g, '""')}"`,
-      d.uploadedBy,
-      d.uploadedDate,
-      d.version || 'v1.0'
-    ]);
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `sk_council_documents_repository.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
-  const exportRosterToCSV = () => {
-    const headers = ["Member ID", "Full Name", "Email", "Mobile", "Zone", "Educational Level", "School", "Scholar Status", "Status"];
-    const rows = localYouthProfiles.map(y => [
-      y.id,
-      `"${y.name.replace(/"/g, '""')}"`,
-      y.email,
-      y.mobile,
-      y.zone,
-      `"${y.educationalLevel.replace(/"/g, '""')}"`,
-      `"${(y.school || '').replace(/"/g, '""')}"`,
-      y.scholarStatus,
-      y.status
-    ]);
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `katipunan_ng_kabataan_youth_roster.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
-  const exportTreasurerFinancialCSV = () => {
-    const headers = ["Expense ID", "Initiative / Program", "Gross Amount", "Payee / Supplier", "Tax Group", "Withholding Tax", "Net Disbursed", "Date Logged"];
-    const rows = expenses.map(e => [
-      e.id,
-      `"${e.programTitle.replace(/"/g, '""')}"`,
-      e.amount,
-      `"${e.supplier.replace(/"/g, '""')}"`,
-      e.taxType,
-      e.withholdingTax,
-      e.netAmount,
-      e.dateLogged
-    ]);
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `SK_Treasurer_Financial_Report_${currentTenant?.name || 'Barangay'}_${new Date().getFullYear()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   const printOfficialReport = (title: string, reportHtml: string) => {
     const printWindow = window.open('', '_blank');
@@ -1127,7 +1062,17 @@ export default function OfficialPages({
       r.qrCode === scannedText
     );
     const resolvedName = (reg?.participantName || youthProf?.name || regAny?.participantName || regGlobal?.participantName || "").trim();
-    const youthName = resolvedName && resolvedName !== partId ? resolvedName : "Unknown / Unregistered Youth";
+    // Fallback: try harder to find a real name before defaulting to placeholder
+    let youthName = resolvedName && resolvedName !== partId ? resolvedName : '';
+    if (!youthName && partId) {
+      const lookedUp = youthProfiles.find((y: any) => y.userId === partId || y.id === partId);
+      youthName = lookedUp?.name || '';
+    }
+    if (!youthName && partId) {
+      const fromReg = registrations.find((r: any) => r.participantId === partId || r.userId === partId);
+      youthName = fromReg?.participantName || '';
+    }
+    if (!youthName) youthName = "Unknown / Unregistered Youth";
     const finalPartId = reg?.participantId || youthProf?.id || regAny?.participantId || regGlobal?.participantId || partId;
     const purokVal = youthProf?.zone || regAny?.zone || "Naga Youth Constituent";
     // The backend is authoritative for identity, registration, and duplicate check-in validation.
@@ -1450,7 +1395,7 @@ export default function OfficialPages({
                 </div>
                 {announcements.length > 0 ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {announcements.slice(0, 4).map(announcement => (
+                    {announcements.slice(0, 2).map(announcement => (
                       <article key={announcement.id} className="rounded-lg border border-white bg-white p-3">
                         <p className="text-[10px] font-bold uppercase tracking-wide text-blue-700">{announcement.category}</p>
                         <h4 className="mt-1 text-sm font-black text-slate-900">{announcement.title}</h4>
@@ -1716,7 +1661,7 @@ export default function OfficialPages({
                 <div className="space-y-8">
                   {/* Quick Action Secretariat Command Hub */}
                   <div className="bg-gradient-to-r from-[#091d64] via-[#102a83] to-[#1e3a8a] rounded-2xl p-6 text-white shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div className="space-y-1.5 max-w-xl">
+                    <div className="space-y-1.5 max-w-lg">
                       <div className="flex items-center gap-2">
                         <span className="px-2.5 py-0.5 bg-amber-400 text-slate-900 font-extrabold text-[10px] rounded uppercase tracking-wider">
                           Council Secretariat Console
@@ -1729,7 +1674,7 @@ export default function OfficialPages({
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2.5">
+                    <div className="flex flex-wrap gap-2.5 lg:flex-nowrap shrink-0">
                       <button 
                         onClick={() => {
                           setDocForm({
@@ -2069,8 +2014,8 @@ export default function OfficialPages({
               {currentRole === 'SK Kagawad' && (
                 <div className="space-y-8">
                   {/* Quick Action Program Officer Command Hub */}
-                  <div className="bg-gradient-to-r from-[#091d64] via-[#1e3a8a] to-[#2563eb] rounded-2xl p-6 text-white shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div className="space-y-1.5 max-w-xl">
+                  <div className="bg-gradient-to-r from-[#091d64] via-[#102a83] to-[#1e3a8a] rounded-2xl p-6 text-white shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div className="space-y-1.5 max-w-lg">
                       <div className="flex items-center gap-2">
                         <span className="px-2.5 py-0.5 bg-amber-400 text-slate-900 font-extrabold text-[10px] rounded uppercase tracking-wider">
                           Program Operations & Youth Engagement Console
@@ -2083,7 +2028,7 @@ export default function OfficialPages({
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2.5">
+                    <div className="flex flex-wrap gap-2.5 lg:flex-nowrap shrink-0">
                       <button 
                         onClick={() => {
                           setProgForm({ title: '', description: '', startDate: '', endDate: '', location: '', maxParticipants: 0, budgetAllocation: 0, aipReference: '', category: 'Sports Development', status: 'Published' });
@@ -2262,7 +2207,7 @@ export default function OfficialPages({
                 <div className="space-y-8">
                   {/* Quick Action Treasurer Command Hub */}
                   <div className="bg-gradient-to-r from-emerald-900 via-[#091d64] to-[#0f172a] rounded-2xl p-6 text-white shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div className="space-y-1.5 max-w-xl">
+                    <div className="space-y-1.5 max-w-lg">
                       <div className="flex items-center gap-2">
                         <span className="px-2.5 py-0.5 bg-emerald-400 text-slate-900 font-extrabold text-[10px] rounded uppercase tracking-wider">
                           Financial Management & COA Audit Console
@@ -2275,7 +2220,7 @@ export default function OfficialPages({
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2.5">
+                    <div className="flex flex-wrap gap-2.5 lg:flex-nowrap shrink-0">
                       <button 
                         onClick={() => {
                           setExpenseForm({ programId: programs[0]?.id || '', budgetId: budgetOptions[0]?.id || '', amount: 0, supplier: '', taxType: 'VAT', category: 'Supplies' });
@@ -3282,13 +3227,30 @@ export default function OfficialPages({
               {currentRole === 'SK Treasurer' ? (
                 <div className="bg-white p-6 rounded-xl border border-slate-100 space-y-6">
                   {/* Header */}
-                  <div className="border-b border-slate-100 pb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 bg-blue-50 text-[#091d64] font-black text-[10px] rounded uppercase tracking-wider">FINANCIAL GOVERNANCE • FISCAL YEAR 2026</span>
-                      <span className="text-xs text-slate-400">Barangay {currentTenant?.name || 'Barangay'} • Naga City</span>
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 bg-blue-50 text-[#091d64] font-black text-[10px] rounded uppercase tracking-wider">FINANCIAL GOVERNANCE • FISCAL YEAR 2026</span>
+                        <span className="text-xs text-slate-400">Barangay {currentTenant?.name || 'Barangay'} • Naga City</span>
+                      </div>
+                      <h3 className="font-sans font-bold text-slate-900 text-lg mt-1">Financial Statements & Reports</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Financial statements and compliance tracking for SK funds and disbursements.</p>
                     </div>
-                    <h3 className="font-sans font-bold text-slate-900 text-lg mt-1">Financial Statements & Reports</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Financial statements and compliance tracking for SK funds and disbursements.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const body = '<h3>Financial Summary</h3>' +
+                          '<p><strong>Barangay:</strong> ' + (currentTenant?.name || 'Barangay') + '</p>' +
+                          '<p><strong>Total Annual Budget:</strong> P' + totalBarangayBudget.toLocaleString() + '</p>' +
+                          '<p><strong>Total Disbursed:</strong> P' + totalSpentExpenses.toLocaleString() + '</p>' +
+                          '<p><strong>Remaining Cash:</strong> P' + remainingCash.toLocaleString() + '</p>' +
+                          '<p><strong>Utilization Rate:</strong> ' + budgetUtilizationRate.toFixed(1) + '%</p>';
+                        printOfficialReport('SK Financial Report - ' + (currentTenant?.name || 'Barangay'), body);
+                      }}
+                      className="px-4 py-2.5 bg-[#091d64] hover:bg-[#122878] text-white font-bold rounded-xl text-xs flex items-center gap-2 shrink-0"
+                    >
+                      <Printer className="w-4 h-4" /> Export Financial Report (PDF)
+                    </button>
                   </div>
 
                   {/* 4 Financial Stat Cards */}
@@ -3758,15 +3720,9 @@ export default function OfficialPages({
                             handleDownloadPDFReport();
                           }
                         }} 
-                        className="px-4 py-2 bg-[#091d64] hover:bg-opacity-90 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        className="px-4 py-2.5 bg-[#091d64] hover:bg-[#122878] text-white font-bold rounded-xl text-xs flex items-center gap-2 shrink-0"
                       >
                         <Printer className="w-4 h-4" /> Print / Export Official PDF
-                      </button>
-                      <button 
-                        onClick={exportRosterToCSV}
-                        className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Download className="w-4 h-4" /> Export CSV
                       </button>
                     </div>
                   </div>
@@ -4089,12 +4045,6 @@ export default function OfficialPages({
                     <Upload className="w-4 h-4" />
                     Upload Document
                   </button>
-                  <button 
-                    onClick={exportDocsToCSV}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" /> Export Vault (CSV)
-                  </button>
                 </div>
               </div>
 
@@ -4190,15 +4140,6 @@ export default function OfficialPages({
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex justify-center items-center gap-1.5">
-                              {doc.status === 'Pending' && (
-                                <button
-                                  onClick={() => { setSelectedDoc(doc); setReviewNotes(''); setShowReviewDocModal(true); }}
-                                  className="p-1.5 hover:bg-emerald-100 rounded text-emerald-700 font-bold"
-                                  title="Review & Approve Document"
-                                >
-                                  <FileCheck className="w-4 h-4" />
-                                </button>
-                              )}
 
                               <button 
                                 onClick={() => { setSelectedDoc(doc); setShowViewDocModal(true); }} 
@@ -4260,12 +4201,6 @@ export default function OfficialPages({
                     className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer"
                   >
                     <Award className="w-4 h-4 text-slate-600" /> Beneficiaries Summary
-                  </button>
-                  <button 
-                    onClick={exportRosterToCSV}
-                    className="px-3.5 py-2 bg-[#091d64] hover:bg-opacity-95 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  >
-                    <Download className="w-4 h-4" /> Export Masterlist (CSV)
                   </button>
                 </div>
               </div>
@@ -5786,12 +5721,6 @@ export default function OfficialPages({
               </div>
 
               <div className="flex justify-between items-center border-t border-slate-100 pt-4">
-                <button 
-                  onClick={exportRosterToCSV} 
-                  className="px-4 py-2 bg-[#091d64] hover:bg-opacity-90 text-white font-bold rounded-lg text-xs flex items-center gap-1.5"
-                >
-                  <Download className="w-4 h-4" /> Export Complete Masterlist (CSV)
-                </button>
                 <button onClick={() => setShowBeneficiariesModal(false)} className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs">Close</button>
               </div>
             </div>

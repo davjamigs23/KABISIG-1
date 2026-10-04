@@ -163,6 +163,33 @@ router.post(
       ipAddress: req.ip || null,
     });
 
+    // Notify all SK Chairpersons in this tenant that a document awaits review
+    try {
+      const { data: chairpersons } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('role_id', 2);
+
+      if (chairpersons && chairpersons.length > 0) {
+        const { error: uploadNotifErr } = await supabaseAdmin
+          .from('notifications')
+          .insert(
+            chairpersons.map((c: any) => ({
+              tenant_id: tenantId,
+              user_id: c.id,
+              title: 'New Document Pending Approval',
+              message: '"' + title + '" (' + document_type + ') was uploaded by ' + (user.full_name || 'SK Secretary') + '. Please review and approve.',
+              notification_type: 'DOCUMENT_APPROVAL',
+              link: '/documents',
+              is_read: false,
+            })),
+          );
+        if (uploadNotifErr) console.warn('Upload notification failed:', uploadNotifErr.message);
+      }
+    } catch (notifErr: any) {
+      console.warn('Upload notification error:', notifErr?.message || notifErr);
+    }
     sendCreated(res, newDoc, `Document "${title}" uploaded and submitted for approval.`);
   }
 );
@@ -397,6 +424,25 @@ router.patch(
       sendError(res, `Failed to approve document: ${updateError.message}`, 500);
       return;
     }
+    // Notify the original submitter that their document was approved
+    try {
+      if (updated && updated.submitted_by) {
+        const { error: approveNotifErr } = await supabaseAdmin
+          .from('notifications')
+          .insert([{
+            tenant_id: existing.tenant_id,
+            user_id: updated.submitted_by,
+            title: 'Document Approved',
+            message: 'Your document "' + existing.title + '" has been approved.' + (approvalFeedback ? ' Reviewer notes: ' + approvalFeedback : ''),
+            notification_type: 'DOCUMENT_APPROVED',
+            link: '/documents',
+            is_read: false,
+          }]);
+        if (approveNotifErr) console.warn('Approval notification failed:', approveNotifErr.message);
+      }
+    } catch (notifErr: any) {
+      console.warn('Approval notification error:', notifErr?.message || notifErr);
+    }
 
     await recordAuditLog({
       tenantId: existing.tenant_id,
@@ -431,7 +477,7 @@ router.patch(
 
     const { data: existing, error: fetchError } = await supabaseAdmin
       .from('documents')
-      .select('id, tenant_id, title')
+      .select('id, tenant_id, title, submitted_by')
       .eq('id', id)
       .single();
 
@@ -475,6 +521,26 @@ router.patch(
       sendError(res, `Failed to reject document: ${updateError.message}`, 500);
       return;
     }
+
+        // Notify the original submitter that their document was rejected
+        try {
+          if (updated && updated.submitted_by) {
+            const { error: rejectNotifErr } = await supabaseAdmin
+              .from('notifications')
+              .insert([{
+                tenant_id: existing.tenant_id,
+                user_id: updated.submitted_by,
+                title: 'Document Rejected',
+                message: 'Your document "' + existing.title + '" was returned for revision.' + (feedback ? ' Reason: ' + feedback : ''),
+                notification_type: 'DOCUMENT_REJECTED',
+                link: '/documents',
+                is_read: false,
+              }]);
+            if (rejectNotifErr) console.warn('Reject notification failed:', rejectNotifErr.message);
+          }
+        } catch (notifErr: any) {
+          console.warn('Reject notification error:', notifErr?.message || notifErr);
+        }
 
     await recordAuditLog({
       tenantId: existing.tenant_id,
