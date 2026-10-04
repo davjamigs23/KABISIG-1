@@ -1426,20 +1426,6 @@ export default function OfficialPages({
                 {currentRole === 'SK Kagawad' && (
                   <>
                     <div className="bg-white rounded-xl border border-slate-100 p-5 flex items-center gap-4 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-default group">
-                      <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#091d64] flex items-center justify-center flex-shrink-0 shadow-2xs group-hover:bg-[#091d64] group-hover:text-white transition-colors">
-                        <ClipboardList className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Active Programs</span>
-                          <span className="text-[9px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.2 rounded">CBYDP Aligned</span>
-                        </div>
-                        <h3 className="text-2xl font-black text-[#091d64] mt-0.5">{programs.length} <span className="text-xs font-semibold text-slate-400">Initiatives</span></h3>
-                        <p className="text-[10px] text-slate-500 truncate mt-0.5">AYDP 8 Participation Centers</p>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl border border-slate-100 p-5 flex items-center gap-4 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-default group">
                       <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center flex-shrink-0 shadow-2xs group-hover:bg-violet-600 group-hover:text-white transition-colors">
                         <Users className="w-5 h-5" />
                       </div>
@@ -2776,7 +2762,7 @@ export default function OfficialPages({
                     {/* Registered Youth Participant List (Quick Tap) */}
                     <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-slate-800">Quick-Tap Registered Youth</span>
+                        <span className="text-xs font-bold text-slate-800">Registered Participants</span>
                         <span className="text-[10px] font-bold text-slate-400">
                           {selectedProgramRegistrations.length} Registered
                         </span>
