@@ -304,14 +304,16 @@ router.post(
     }
 
     const version = process.env.FACEBOOK_GRAPH_VERSION || 'v25.0';
-    const details = [
-      announcement.what ? `What: ${announcement.what}` : '',
-      announcement.where_text ? `Where: ${announcement.where_text}` : '',
-      announcement.event_when ? `When: ${announcement.event_when}` : '',
-      announcement.content,
-      announcement.hashtags || '',
-    ].filter(Boolean).join('\n\n');
-    const message = `${announcement.title}\n\n${details}`;
+    const parts: string[] = [];
+parts.push('📢 ' + announcement.title.toUpperCase());
+parts.push('━━━━━━━━━━━━━━━━━━━━━━');
+if (announcement.what) parts.push('🎯 WHAT\n' + announcement.what);
+if (announcement.where_text) parts.push('📍 WHERE\n' + announcement.where_text);
+if (announcement.event_when) parts.push('📅 WHEN\n' + announcement.event_when);
+if (announcement.content) parts.push('📝 DETAILS\n' + announcement.content);
+parts.push('━━━━━━━━━━━━━━━━━━━━━━');
+if (announcement.hashtags) parts.push(announcement.hashtags);
+const message = parts.join('\n\n');
 
     let imageUrl: string | null = null;
     if (announcement.image_path) {
