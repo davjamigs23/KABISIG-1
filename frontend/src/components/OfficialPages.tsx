@@ -5630,13 +5630,18 @@ export default function OfficialPages({
                     const updated = { ...selectedYouthProfile, ...youthEditForm };
                     setLocalYouthProfiles(prev => prev.map(y => y.id === selectedYouthProfile.id ? updated : y));
                     try {
-                      await kabisigApi.updateProfile(updated);
-                    } catch (err) {
-                      console.warn('Database save warning from Official edit:', err);
+                      const result = await kabisigApi.updateProfile(updated, selectedYouthProfile.userId);
+                      if (!result.success) {
+                        alert('Save failed: ' + (result.message || 'Unable to update profile. You may not have permission to edit this user.'));
+                        return;
+                      }
+                      setShowYouthDetailModal(false);
+                      alert('Profile updated for ' + youthEditForm.name + '!');
+                    } catch (err: any) {
+                      console.warn('Save error:', err);
+                      alert('Save failed: ' + (err?.message || 'Unknown error.'));
                     }
-                    setShowYouthDetailModal(false);
-                    alert(`Profile updated for ${youthEditForm.name}!`);
-                  }} 
+                  }}
                   className="px-5 py-2 bg-[#091d64] text-white font-bold rounded-lg text-xs cursor-pointer"
                 >
                   Save Profile Updates

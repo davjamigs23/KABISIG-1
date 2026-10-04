@@ -730,10 +730,10 @@ class KabisigApiClient {
   }
 
   // --- USER & RESIDENT PROFILES (DATABASE PERSISTENCE) ---
-  async updateProfile(profile: Partial<YouthProfile>): Promise<{ success: boolean; data?: any; message?: string; error?: any }> {
-    return await this.request('/users/profile', {
+  async updateProfile(payload: any, userId?: string): Promise<{ success: boolean; data?: any; message?: string; error?: any }> {
+    return await this.request(userId ? ('/users/' + userId + '/profile') : '/users/profile', {
       method: 'PUT',
-      body: JSON.stringify(profile),
+      body: JSON.stringify(payload),
     });
   }
 

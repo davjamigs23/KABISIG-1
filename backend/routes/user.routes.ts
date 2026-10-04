@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { supabaseAdmin, recordAuditLog } from '../services/supabase.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
-import { authenticateUser } from '../middleware/auth.js';
+import {authenticateUser, requireActiveUser, requireRoles} from '../middleware/auth.js';
 import type { AuthRequest } from '../types/database.types.js';
 
 const router = express.Router();
@@ -281,6 +281,9 @@ router.put('/profile', authenticateUser, async (req: Request, res: Response): Pr
     const normalizedEmp = normalizeEmploymentStatus(rawEmp) || existingProfile?.employment_status;
 
     const residentPayload: Record<string, any> = {
+      school: body.school ?? undefined,
+      course: body.course ?? undefined,
+      year_level: body.year_level ?? body.yearLevel ?? undefined,
       zone: body.zone ?? body.purok ?? undefined,
       user_id: userId,
       tenant_id: tenantId,
@@ -556,4 +559,87 @@ router.get('/youth-profiles', authenticateUser, async (req: Request, res: Respon
   }
 });
 
+/**
+ * PUT /api/users/:id/profile
+ * Admin-only: SK Chairperson updates another user's profile.
+ * Reuses the same field mapping as PUT /profile.
+ */
+router.put(
+  '/:id/profile',
+  authenticateUser,
+  requireActiveUser,
+  requireRoles('BARANGAY_ADMIN', 'SK_OFFICIAL', 'SUPER_ADMIN'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id: targetUserId } = req.params;
+      const requester = (req as AuthRequest).user!;
+      const { body } = req;
+
+      // Load target user
+      const { data: targetUser, error: targetErr } = await supabaseAdmin
+        .from('users')
+        .select('id, tenant_id, full_name, email')
+        .eq('id', targetUserId)
+        .maybeSingle();
+
+      if (targetErr || !targetUser) {
+        sendError(res, 'Target user not found.', 404);
+        return;
+      }
+
+      // Tenant guard
+      if (requester.role !== 'SUPER_ADMIN' && requester.tenant_id !== targetUser.tenant_id) {
+        sendError(res, 'Forbidden: You cannot edit users from another Barangay.', 403);
+        return;
+      }
+
+      // Update public.users row (name/phone only)
+      const userUpdates: Record<string, any> = {};
+      if (body.name || body.full_name) userUpdates.full_name = body.name || body.full_name;
+      if (body.mobile || body.phone) userUpdates.phone = body.mobile || body.phone;
+      if (Object.keys(userUpdates).length > 0) {
+        await supabaseAdmin.from('users').update(userUpdates).eq('id', targetUserId);
+      }
+
+      // Upsert resident_profile
+      const residentPayload: Record<string, any> = {
+        user_id: targetUserId,
+        tenant_id: targetUser.tenant_id,
+        updated_at: new Date().toISOString(),
+      };
+      if (body.school !== undefined) residentPayload.school = body.school || null;
+      if (body.course !== undefined) residentPayload.course = body.course || null;
+      if (body.year_level !== undefined || body.yearLevel !== undefined)
+        residentPayload.year_level = body.year_level || body.yearLevel || null;
+      if (body.zone !== undefined) residentPayload.zone = body.zone || null;
+      if (body.address !== undefined) residentPayload.address = body.address || null;
+      if (body.educationalLevel !== undefined || body.educational_status !== undefined)
+        residentPayload.educational_status = body.educationalLevel || body.educational_status || null;
+      if (body.employmentStatus !== undefined || body.employment_status !== undefined)
+        residentPayload.employment_status = body.employmentStatus || body.employment_status || null;
+
+      const { error: profileErr } = await supabaseAdmin
+        .from('resident_profile')
+        .upsert(residentPayload, { onConflict: 'user_id' });
+
+      if (profileErr) {
+        console.warn('Admin profile update warning:', profileErr.message);
+      }
+
+      await recordAuditLog({
+        tenantId: targetUser.tenant_id,
+        userId: requester.id,
+        action: 'ADMIN_UPDATE_YOUTH_PROFILE',
+        entityName: 'resident_profile',
+        entityId: String(targetUserId),
+        details: { updated_fields: Object.keys(body) },
+        ipAddress: req.ip || null,
+      });
+
+      sendSuccess(res, { id: targetUserId }, `Profile updated for ${targetUser.full_name}.`);
+    } catch (err: any) {
+      sendError(res, err?.message || 'Failed to update profile.', 500);
+    }
+  }
+);
 export default router;
