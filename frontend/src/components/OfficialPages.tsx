@@ -2698,31 +2698,17 @@ export default function OfficialPages({
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 text-slate-700 space-y-1">
+                      <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/80 flex items-center gap-2">
                         <div className="flex items-center gap-2">
                           <QrCode className="w-4 h-4 text-[#091d64]" />
-                          <span className="text-xs font-black uppercase tracking-wider text-slate-800">Scanner Ready</span>
+                          <span className="text-xs font-black uppercase tracking-wider text-slate-800">Awaiting scan</span>
                         </div>
                         <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                          {qrMessage || 'Point device camera at a Youth Constituent ID QR code or Event Pass ticket. Scanned output details will appear here instantly.'}
+                          {qrMessage || 'Awaiting scan...'}
                         </p>
                       </div>
                     )}
-
-                    {/* Explanatory Guide Box: What gets scanned in SK KABISIG? */}
-                    <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/40 space-y-2.5">
-                      <h6 className="text-xs font-bold text-[#091d64] flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                        What QR codes are scanned at SK events?
-                      </h6>
-                      <div className="p-2.5 rounded-lg bg-white border border-blue-100/80 space-y-1">
-                        <span className="font-bold text-slate-800 block text-[11px] text-blue-900"> Youth Constituent Digital Resident ID QR Code</span>
-                        <p className="text-[10px] text-slate-500 leading-normal">
-                          Officials scan the youth's single official Digital ID QR code (e.g. <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-700">SK-2026-001</code>) displayed under <strong className="text-slate-700">My ID</strong> or <strong className="text-slate-700">Registrations</strong>. The system verifies if they have an approved registration slot for the selected program and checks them in instantly.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+</div>
 
                   {/* Right Column: Code Input & Quick Constituent Tap Cards */}
                   <div className="lg:col-span-5 space-y-4">
