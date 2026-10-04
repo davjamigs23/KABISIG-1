@@ -491,7 +491,18 @@ export function getComplianceIssues(
  * 9. Feedback Analysis (Rule-Based)
  * Analyzes content using keyword parsing for sentiment tagging.
  */
-export function analyzeFeedbackSentiment(content: string): 'Positive' | 'Negative' | 'Neutral' {
+export function analyzeFeedbackSentiment(content: string, category?: string): 'Positive' | 'Negative' | 'Neutral' {
+  // Category override: use intent when the youth explicitly picks one.
+  // A polite closing word in a Complaint should not flip sentiment.
+  if (category) {
+    const c = category.toLowerCase();
+    if (c === 'complaint' || c === 'concern' || c === 'issue') {
+      return 'Negative';
+    }
+    if (c === 'compliment' || c === 'praise' || c === 'commendation') {
+      return 'Positive';
+    }
+  }
   const normalized = content.toLowerCase();
 
   const positiveKeywords = [
@@ -503,7 +514,7 @@ export function analyzeFeedbackSentiment(content: string): 'Positive' | 'Negativ
   const negativeKeywords = [
     'small', 'hot', 'late', 'bad', 'slow', 'crowded', 'poor', 'waste', 
     'boring', 'unorganized', 'disappointed', 'delayed', 'limited', 'confusing',
-    'hard', 'difficult', 'loud', 'noisy', 'expensive', 'unhelpful', 'short'
+    'hard', 'difficult', 'loud', 'noisy', 'expensive', 'unhelpful', 'short', 'do not like', 'dislike', 'not good', 'not working', 'problem', 'issue', 'concern', 'intimidating', 'unfair', 'hate', 'upset', 'unhappy', 'frustrated'
   ];
 
   let positiveScore = 0;

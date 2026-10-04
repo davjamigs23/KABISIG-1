@@ -243,6 +243,7 @@ export default function OfficialPages({
 
   // --- MODALS STATE ---
   const [showProgModal, setShowProgModal] = useState(false);
+  const [programNotice, setProgramNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const handleDownloadPDFReport = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -618,7 +619,7 @@ export default function OfficialPages({
 
   // --- STATS COMPUTATIONS ---
   const totalSpentExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
-  const totalBarangayBudget = programs.reduce((sum, program) => sum + (Number(program.budgetAllocation) || 0), 0);
+  const totalBarangayBudget = Number(currentTenant?.totalBudget) || Number(currentTenant?.allocatedBudget) || programs.reduce((sum, program) => sum + (Number(program.budgetAllocation) || 0), 0);
   const remainingCash = totalBarangayBudget - totalSpentExpenses;
   const budgetUtilizationRate = (totalSpentExpenses / totalBarangayBudget) * 100;
 
@@ -643,11 +644,19 @@ export default function OfficialPages({
       status: progForm.status,
       registeredCount: 0
     };
-    const created = await onAddProgram(newP);
-    if (created) {
-      setShowProgModal(false);
-    }
-  };
+    try {
+          const created = await onAddProgram(newP);
+          if (created !== false) {
+            setShowProgModal(false);
+            setProgramNotice({ type: 'success', text: 'Program "' + progForm.title + '" created successfully.' });
+            window.setTimeout(() => setProgramNotice(null), 5000);
+          } else {
+            setProgramNotice({ type: 'error', text: 'Program creation failed. Please try again.' });
+          }
+        } catch (err: any) {
+          setProgramNotice({ type: 'error', text: err?.message || 'Program creation failed.' });
+        }
+      };
 
   const getDefaultApproverForCategory = (cat: string): string => {
     switch (cat) {
@@ -808,13 +817,10 @@ export default function OfficialPages({
         <div class="footer-sig">
           <div class="sig-box">
             <p>Prepared & Certified Correct:</p>
-            <div class="sig-line">${currentUser?.full_name || 'Authorized SK Official'}</div>
             <p style="font-size:10px; color:#64748b; margin-top:2px;">${currentRole || 'SK Official'}</p>
           </div>
           <div class="sig-box">
             <p>Attested & Approved:</p>
-            <div class="sig-line">${currentTenant?.chairperson || 'SK Chairperson'}</div>
-            <p style="font-size:10px; color:#64748b; margin-top:2px;">SK Chairperson</p>
           </div>
         </div>
         <script>
@@ -1385,35 +1391,34 @@ export default function OfficialPages({
           {/* ==================== SCREEN 1: DASHBOARD (Unified role-based screen) ==================== */}
           {activeMenu === 'dashboard' && (
             <div className="space-y-8 animate-in fade-in duration-200">
-              <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-5 text-left">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-extrabold text-[#091d64]">Barangay Announcements</h3>
-                    <p className="mt-1 text-[11px] text-slate-500">Published notices from the SK Chairperson for this barangay.</p>
-                  </div>
-                  <Megaphone className="h-5 w-5 text-[#091d64]" />
+              {programNotice && (
+                <div role="status" className={`rounded-xl border px-4 py-3 text-xs font-semibold ${programNotice.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-800'}`}>
+                  {programNotice.text}
                 </div>
-                {announcements.length > 0 ? (
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {announcements.slice(0, 2).map(announcement => (
-                      <article key={announcement.id} className="rounded-lg border border-white bg-white p-3">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-blue-700">{announcement.category}</p>
-                        <h4 className="mt-1 text-sm font-black text-slate-900">{announcement.title}</h4>
-                        {announcement.imageUrl && <img src={announcement.imageUrl} alt={`Pubmat for ${announcement.title}`} className="mt-2 max-h-48 w-full rounded-md bg-slate-50 object-contain" />}
-                        <div className="mt-2 space-y-1 text-[11px] text-slate-600">
-                          {announcement.what && <p><strong>What:</strong> {announcement.what}</p>}
-                          {announcement.where && <p><strong>Where:</strong> {announcement.where}</p>}
-                          {announcement.when && <p><strong>When:</strong> {announcement.when}</p>}
-                          <p className="line-clamp-3 whitespace-pre-line">{announcement.content}</p>
-                          {announcement.hashtags && <p className="font-semibold text-blue-700">{announcement.hashtags}</p>}
-                        </div>
-                        <p className="mt-2 text-[10px] text-slate-400">{announcement.datePosted}</p>
-                      </article>
-                    ))}
+              )}
+              <section className="bg-white rounded-xl border border-slate-100 shadow-xs p-4 text-left">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="w-4 h-4 text-[#091d64]" />
+                    <h4 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Latest SK Announcements</h4>
                   </div>
-                ) : (
-                  <p className="mt-4 rounded-lg border border-dashed border-blue-200 bg-white/70 p-4 text-center text-xs font-semibold text-slate-400">No published announcements yet.</p>
-                )}
+                  <span className="text-[10px] text-slate-400 font-semibold">{announcements.filter(a => a.status === 'published').length} total</span>
+                </div>
+                <div className="space-y-3">
+                  {announcements.filter(a => a.status === 'published').slice(0, 2).map(a => (
+                    <div key={a.id} className="rounded-lg border border-slate-100 p-2.5 hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="rounded border border-blue-100 bg-blue-50 px-2 py-0.5 text-[9px] font-bold uppercase text-blue-700">{a.category}</span>
+                        <span className="text-[10px] text-slate-400 font-semibold">{a.datePosted}</span>
+                      </div>
+                      <p className="text-xs font-bold text-slate-800 truncate">{a.title}</p>
+                      <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{a.content}</p>
+                    </div>
+                  ))}
+                  {announcements.filter(a => a.status === 'published').length === 0 && (
+                    <p className="py-6 text-center text-xs text-slate-400 font-semibold">No published announcements yet.</p>
+                  )}
+                </div>
               </section>
               
               {/* 4 Metric Cards */}
@@ -1490,7 +1495,7 @@ export default function OfficialPages({
                           <span className="text-[9px] font-bold bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded">Active</span>
                         </div>
                         <h3 className="text-2xl font-black text-[#091d64] mt-0.5">{youthProfiles.length} <span className="text-xs font-semibold text-slate-400">Residents</span></h3>
-                        <p className="text-[10px] text-slate-500 truncate mt-0.5">Katipunan ng Kabataan (15–30 yrs)</p>
+                        <p className="text-[10px] text-slate-500 truncate mt-0.5">Katipunan ng Kabataan (Ages 15–30 yrs)</p>
                       </div>
                     </div>
 
@@ -1846,7 +1851,7 @@ export default function OfficialPages({
                             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                             Secretariat Document Pipeline
                           </h4>
-                          <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Current Cycle</span>
+                          <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded"></span>
                         </div>
 
                         <div className="space-y-3">
@@ -2066,7 +2071,7 @@ export default function OfficialPages({
                           <p className="text-xs text-slate-400 mt-0.5">Real-time registration counts against maximum target participant limits.</p>
                         </div>
                         <span className="text-xs font-mono font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded">
-                          Live program data
+
                         </span>
                       </div>
 
@@ -2091,7 +2096,7 @@ export default function OfficialPages({
                         </ResponsiveContainer>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-100 text-xs text-slate-400">Committee activity summaries will appear when live program records are available.</div>
+                      <div className="pt-2 border-t border-slate-100 text-xs text-slate-400"></div>
                     </div>
                     <div className="space-y-6 col-span-1">
                       {/* Venue & Schedule Conflict Alert Widget */}
@@ -2572,7 +2577,7 @@ export default function OfficialPages({
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-sans font-extrabold text-slate-900 text-lg">SK Youth Attendance & QR Validation Desk</h3>
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-extrabold text-[10px] rounded-full uppercase tracking-wider">Mobile Web Ready</span>
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-extrabold text-[10px] rounded-full uppercase tracking-wider"></span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">Live camera QR verification and real-time attendance tracking for SK Kagawads.</p>
                 </div>
@@ -2586,13 +2591,13 @@ export default function OfficialPages({
                     <Camera className="w-4 h-4" />
                     <span>Camera QR Scanner</span>
                   </button>
-                  <button 
-                    onClick={() => setAttendanceMode('manual')} 
-                    className={`flex-1 sm:flex-none px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[42px] ${attendanceMode === 'manual' ? 'bg-[#091d64] text-white shadow-md shadow-blue-900/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                  >
-                    <ClipboardList className="w-4 h-4" />
-                    <span>Roster & Manual List</span>
-                  </button>
+                  <button
+                  onClick={() => setAttendanceMode('manual')} 
+                  className={`flex-1 sm:flex-none px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[42px] ${attendanceMode === 'manual' ? 'bg-[#091d64] text-white shadow-md shadow-blue-900/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                >
+                  <ClipboardList className="w-4 h-4" />
+                  <span>Roster & Manual List</span>
+                </button>
                 </div>
               </div>
 
@@ -2609,10 +2614,6 @@ export default function OfficialPages({
                       <option key={p.id} value={p.id}>{p.title} ({p.category})</option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase mb-1 tracking-wider">Verification Date</label>
-                  <input type="date" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#091d64]" />
                 </div>
               </div>
 
@@ -2714,7 +2715,7 @@ export default function OfficialPages({
                       <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 text-slate-700 space-y-1">
                         <div className="flex items-center gap-2">
                           <QrCode className="w-4 h-4 text-[#091d64]" />
-                          <span className="text-xs font-black uppercase tracking-wider text-slate-800">Scanner Output Desk Active</span>
+                          <span className="text-xs font-black uppercase tracking-wider text-slate-800">Scanner Ready</span>
                         </div>
                         <p className="text-xs font-medium text-slate-600 leading-relaxed">
                           {qrMessage || 'Point device camera at a Youth Constituent ID QR code or Event Pass ticket. Scanned output details will appear here instantly.'}
@@ -2929,13 +2930,13 @@ export default function OfficialPages({
                           <BarChart3 className="w-4 h-4 text-[#091d64]" />
                           Rule-Based Feedback Sentiment
                         </h4>
-                        <span className="text-[10px] bg-blue-50 text-[#091d64] font-bold px-2 py-0.5 rounded">Rule-Based NLP</span>
+                        <span className="text-[10px] bg-blue-50 text-[#091d64] font-bold px-2 py-0.5 rounded">Rule-Based Analysis</span>
                       </div>
                       <p className="text-[11px] text-slate-500">Automated sentiment categorization using rule-based keyword matching.</p>
                       
                       {(() => {
-                        const positiveCount = localFeedback.filter(f => analyzeFeedbackSentiment(f.content) === 'Positive').length;
-                        const negativeCount = localFeedback.filter(f => analyzeFeedbackSentiment(f.content) === 'Negative').length;
+                        const positiveCount = localFeedback.filter(f => analyzeFeedbackSentiment(f.content, f.type) === 'Positive').length;
+                        const negativeCount = localFeedback.filter(f => analyzeFeedbackSentiment(f.content, f.type) === 'Negative').length;
                         const neutralCount = localFeedback.length - positiveCount - negativeCount;
                         const total = localFeedback.length || 1;
                         return (
@@ -3070,7 +3071,7 @@ export default function OfficialPages({
 
                               {/* Rule-Based Sentiment Classification Badge */}
                               {(() => {
-                                const sentiment = analyzeFeedbackSentiment(fb.content);
+                                const sentiment = analyzeFeedbackSentiment(fb.content, fb.type);
                                 return (
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 ${
                                     sentiment === 'Positive' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
@@ -4032,7 +4033,7 @@ export default function OfficialPages({
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 bg-[#eff6ff] text-[#091d64] font-black text-[10px] rounded uppercase tracking-wider">DOCUMENT REPOSITORY & DIGITIZED REGISTRY</span>
+                    <span className="px-2.5 py-0.5 bg-[#eff6ff] text-[#091d64] font-black text-[10px] rounded uppercase tracking-wider">DOCUMENT REPOSITORY</span>
                   </div>
                   <h3 className="font-sans font-bold text-slate-800 text-base mt-1">Sangguniang Kabataan Document Repository</h3>
                   <p className="text-xs text-slate-400 mt-0.5">Upload, track, review, sign-off, and archive resolutions, meeting minutes, vouchers, and DILG compliance files.</p>
@@ -4190,7 +4191,7 @@ export default function OfficialPages({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="px-2.5 py-0.5 bg-[#eff6ff] text-[#091d64] font-black text-[10px] rounded uppercase tracking-wider">SEC 14 RECORD-KEEPING MANDATE</span>
-                    <span className="text-xs text-slate-400">Katipunan ng Kabataan Roster</span>
+                    <span className="text-xs text-slate-400">Youth Registry</span>
                   </div>
                   <h3 className="font-sans font-bold text-slate-900 text-lg mt-1">Katipunan ng Kabataan Youth Masterlist</h3>
                   <p className="text-xs text-slate-500 mt-0.5">The SK Secretary maintains the verified constituent roster and demographic profile database. Final registration approvals for new constituents are processed by the Barangay Admin.</p>
@@ -4501,6 +4502,30 @@ export default function OfficialPages({
                 <button type="button" onClick={() => { setAllocateError(''); setShowAllocateProgram(true); }} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#091d64] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#122878]">
                   <Plus className="h-4 w-4" /> Allocate to program
                 </button>
+              </div>
+
+              {/* Treasurer summary cards - Total / Allocated / Spent / Remaining */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-5 rounded-xl border border-slate-100 bg-white">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total SK Budget</span>
+                  <h4 className="text-xl font-black text-[#091d64] mt-1">₱{totalBarangayBudget.toLocaleString()}</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Annual 10% Fund ceiling</p>
+                </div>
+                <div className="p-5 rounded-xl border border-blue-100 bg-blue-50/30">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">Allocated to Programs</span>
+                  <h4 className="text-xl font-black text-blue-700 mt-1">₱{programs.reduce((s, p) => s + (Number(p.budgetAllocation) || 0), 0).toLocaleString()}</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Sum of program allocations</p>
+                </div>
+                <div className="p-5 rounded-xl border border-rose-100 bg-rose-50/30">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 block">Total Spent</span>
+                  <h4 className="text-xl font-black text-rose-700 mt-1">₱{totalSpentExpenses.toLocaleString()}</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{budgetUtilizationRate.toFixed(1)}% utilized</p>
+                </div>
+                <div className="p-5 rounded-xl border border-emerald-100 bg-emerald-50/30">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block">Remaining Balance</span>
+                  <h4 className="text-xl font-black text-emerald-700 mt-1">₱{remainingCash.toLocaleString()}</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Available to spend</p>
+                </div>
               </div>
 
               {/* Tally boxes - Refined Premium Design */}
@@ -5035,15 +5060,7 @@ export default function OfficialPages({
               <p className="text-xs text-slate-300 mt-1">Audit transactions, payee details, and calculate automatic withholding tax.</p>
             </div>
             <div className="p-6 space-y-4 text-xs font-semibold">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Target SK Program</label>
-                  <select value={expenseForm.programId} onChange={(e)=>setExpenseForm({...expenseForm, programId: e.target.value})} className="w-full p-2 border rounded text-xs">
-                    {programs.map(p => (
-                      <option key={p.id} value={p.id}>{p.title}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Expense Category</label>
                   <select value={expenseForm.category} onChange={(e)=>setExpenseForm({...expenseForm, category: e.target.value as any})} className="w-full p-2 border rounded text-xs">
@@ -5055,10 +5072,20 @@ export default function OfficialPages({
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Barangay Budget Allocation</label>
+                <div className="mb-3 p-3 rounded-lg bg-blue-50/50 border border-blue-100">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total SK Budget (Chairperson)</span>
+                  <span className="text-sm font-black text-[#091d64] mt-0.5 block">₱{Number(currentTenant?.totalBudget || currentTenant?.allocatedBudget || 0).toLocaleString()}</span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">Pick a program allocation below to deduct from</span>
+                </div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Program Budget Allocation *</label>
                 <select
                   value={expenseForm.budgetId}
-                  onChange={(e) => setExpenseForm({ ...expenseForm, budgetId: e.target.value })}
+                  onChange={(e) => {
+                    const newBudgetId = e.target.value;
+                    const selectedBudget = budgetOptions.find((b: any) => b.id === newBudgetId);
+                    const matchedProgram = programs.find(p => p.title === selectedBudget?.category);
+                    setExpenseForm({ ...expenseForm, budgetId: newBudgetId, programId: matchedProgram?.id || '' });
+                  }}
                   className="w-full p-2 border rounded text-xs"
                   disabled={isLoadingBudgets || budgetOptions.length === 0}
                   required

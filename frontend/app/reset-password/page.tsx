@@ -101,7 +101,7 @@ export default function ResetPasswordPage() {
           </svg>
         </div>
         <div className="relative z-10">
-          <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center p-2 shadow-lg">
+          <div className="w-24 h-24 rounded-2xl bg-white flex items-center justify-center p-2 shadow-lg">
             <img src="/images/Kabisig_logo.png" alt="KABISIG" className="w-full h-full object-contain" />
           </div>
         </div>

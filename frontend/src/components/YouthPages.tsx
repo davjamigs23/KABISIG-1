@@ -248,9 +248,12 @@ export default function YouthPages({
 
   // Derived arrays
   const myRegistrations = localRegs.filter(r => r.participantId === youth.userId || r.participantId === youth.id);
-  const myFeedback = localFeedback.filter(f =>
-    youth.userId && f.userId ? f.userId === youth.userId : f.submittedBy === youth.name
-  );
+  const myFeedback = localFeedback.filter(f => {
+    // Always include the youth's own submissions, including anonymous ones.
+    // Match by userId first (authoritative), fall back to submittedBy name.
+    if (youth.userId && f.userId) return f.userId === youth.userId;
+    return f.submittedBy === youth.name;
+  });
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();

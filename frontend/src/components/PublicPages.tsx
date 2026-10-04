@@ -1157,7 +1157,7 @@ export default function PublicPages({
                           className="mt-0.5 h-4 w-4 rounded border border-slate-300 bg-slate-200 accent-[#091d64] checked:bg-[#091d64] checked:border-[#091d64] focus:ring-0" 
                         />
                         <label htmlFor="privacy-consent" className="cursor-pointer select-none">
-                          I voluntarily consent to the secure collection and processing of my profiling data per RA 10173 Privacy guidelines.
+                          I voluntarily consent to the secure collection and processing of my profiling data per <a href="/docs/privacy-consent.pdf" target="_blank" rel="noopener noreferrer" className="text-[#091d64] font-bold underline hover:text-blue-700">RA 10173 Privacy guidelines</a>.
                         </label>
                       </div>
                     </div>
